@@ -1,0 +1,19 @@
+[package]
+name = "vector-addition-chain"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ark-ff = "0.3"
+#hashconsing = { version = "1.5", default-features = false, features = ["with_ahash"] }
+hashconsing = { git = "https://github.com/alex-ozdemir/hashconsing.git", branch = "ahash" }
+
+[dev-dependencies]
+ark-bls12-381 = "0.3"
+ark-std = "0.3"
+rand = "0.8"
+
+[profile.release]
+debug = true
