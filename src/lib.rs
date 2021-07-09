@@ -1,7 +1,7 @@
 use ark_ff::Field;
 
-
 pub mod bos_coster;
+pub mod bos_coster_many;
 
 /// A vector addition chain
 ///
@@ -48,6 +48,7 @@ pub type ChainBuilder<F> = fn(target: Vec<F>) -> VecAddChain;
 #[cfg(test)]
 mod tests {
     use super::bos_coster;
+    use super::bos_coster_many;
     use super::{check_chain, ChainBuilder, VecAddChain};
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
@@ -65,6 +66,11 @@ mod tests {
                 vec![F::one(); n],
             );
             assert_eq!(ch.adds.len(), n - 1);
+            let ch = test_on_target::<F>(
+                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
+                vec![F::one(); n],
+            );
+            assert_eq!(ch.adds.len(), n - 1);
         }
     }
 
@@ -74,7 +80,10 @@ mod tests {
                 bos_coster::build_chain::<F, bos_coster::UseShallow>,
                 vec![F::from(2 as u32); n],
             );
-            //assert_eq!(ch.adds.len(), n);
+            let _ch = test_on_target::<F>(
+                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
+                vec![F::from(2 as u32); n],
+            );
         }
     }
 
@@ -84,7 +93,10 @@ mod tests {
                 bos_coster::build_chain::<F, bos_coster::UseShallow>,
                 (0..n).map(|i| F::from(i as u32)).collect(),
             );
-            //assert_eq!(ch.adds.len(), n);
+            let _ch = test_on_target::<F>(
+                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
+                (0..n).map(|i| F::from(i as u32)).collect(),
+            );
         }
     }
 
@@ -95,10 +107,12 @@ mod tests {
                 bos_coster::build_chain::<F, bos_coster::UseShallow>,
                 (0..size).map(|_| F::rand(rng)).collect(),
             );
-            //assert_eq!(ch.adds.len(), n);
+            let _ch = test_on_target::<F>(
+                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
+                (0..size).map(|_| F::rand(rng)).collect(),
+            );
         }
     }
-
 
     #[test]
     fn test_ones_bls12_381() {

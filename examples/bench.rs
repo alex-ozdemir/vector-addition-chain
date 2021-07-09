@@ -1,7 +1,7 @@
 use ark_bls12_381::Fr;
-use ark_ff::{PrimeField, UniformRand};
+use ark_ff::PrimeField;
 use rand::Rng;
-use vector_addition_chain::{bos_coster, ChainBuilder};
+use vector_addition_chain::{bos_coster, ChainBuilder, bos_coster_many};
 fn test<F: PrimeField, R: Rng>(
     l2elems: usize,
     builder: ChainBuilder<F>,
@@ -21,7 +21,11 @@ fn test<F: PrimeField, R: Rng>(
     let constraints_per_elem = ops_per_elem * add_cost;
     println!(
         "{:10}, log2(elems): {:2}, Adds per elem: {:>8.1}, Cs per elem: {:>8.2}, Cs: {:>8}",
-        builder_name, l2elems, ops_per_elem, constraints_per_elem, constraints_per_elem * elems as f64
+        builder_name,
+        l2elems,
+        ops_per_elem,
+        constraints_per_elem,
+        constraints_per_elem * elems as f64
     );
 }
 
@@ -40,6 +44,18 @@ fn main() {
                     l2elems,
                     bos_coster::build_chain::<Fr, bos_coster::UseDeep>,
                     "deep",
+                    rng,
+                );
+                test(
+                    l2elems,
+                    bos_coster_many::build_chain::<Fr, bos_coster::UseShallow>,
+                    "m-shallow",
+                    rng,
+                );
+                test(
+                    l2elems,
+                    bos_coster_many::build_chain::<Fr, bos_coster::UseDeep>,
+                    "m-deep",
                     rng,
                 );
             }

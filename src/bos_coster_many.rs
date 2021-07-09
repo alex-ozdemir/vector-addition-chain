@@ -2,73 +2,15 @@ use super::VecAddChain;
 use ark_ff::{BigInteger, PrimeField};
 use hashconsing::{
     coll::{HConMap, HConSet},
-    HConsed, HConsign, HashConsign,
+    HConsign, HashConsign,
 };
-use std::cmp::{max, Ord, Ordering, PartialOrd};
-use std::collections::BinaryHeap;
-use std::marker::PhantomData;
+use std::cmp::{max, Ord, Ordering};
 
-#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
-pub struct ChainData {
-    //pub size: usize,
-    pub depth: usize,
-    pub form: Form,
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
-pub enum Form {
-    Add(Chain, Chain),
-    Basis(usize),
-}
-
-pub type Chain = HConsed<ChainData>;
-
-pub trait ChainCmp {
-    /// Greater chain is more likely to be subtracted.
-    fn cmp(l: &Chain, r: &Chain) -> Ordering;
-}
-
-pub struct Entry<B, C> {
-    pub x: B,
-    pub g: Chain,
-    pub comp: PhantomData<C>,
-}
-
-impl<B: Clone, C> Clone for Entry<B, C> {
-    fn clone(&self) -> Self {
-        Self {
-            x: self.x.clone(),
-            g: self.g.clone(),
-            comp: Default::default(),
-        }
-    }
-}
-
-impl<F: PartialOrd, C: ChainCmp> PartialEq for Entry<F, C> {
-    fn eq(&self, other: &Self) -> bool {
-        self.x
-            .partial_cmp(&other.x)
-            .map(|o| o.then_with(|| C::cmp(&self.g, &other.g)) == Ordering::Equal)
-            .unwrap_or(true)
-    }
-}
-impl<F: PartialOrd, C: ChainCmp> Eq for Entry<F, C> {}
-impl<F: PartialOrd, C: ChainCmp> PartialOrd for Entry<F, C> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.x
-            .partial_cmp(&other.x)
-            .map(|o| o.then_with(|| C::cmp(&self.g, &other.g)))
-    }
-}
-impl<F: Ord, C: ChainCmp> Ord for Entry<F, C> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.x.cmp(&other.x).then_with(|| C::cmp(&self.g, &other.g))
-    }
-}
+use super::bos_coster::{ChainData, ChainCmp, Chain, Entry, Form};
 
 struct State<B, C> {
     terms: HConsign<ChainData>,
-    heap: BinaryHeap<Entry<B, C>>,
+    list: Vec<Entry<B, C>>,
     /// A list of all terms, smallest first. Useful for avoiding issues dropping
     drop_list: Vec<Chain>,
     dups: usize,
@@ -118,26 +60,28 @@ impl<F: BigInteger, C: ChainCmp> State<F, C> {
         let mut this = State {
             dups: 0,
             terms: HConsign::empty(),
-            heap: BinaryHeap::new(),
+            list: Vec::new(),
             dimension: target.len(),
             drop_list: Vec::new(),
         };
         for (i, f) in target.into_iter().enumerate() {
             let basis = this.new_basis(i);
             if !f.is_zero() {
-                this.heap.push(Entry {
+                this.list.push(Entry {
                     x: f,
                     g: basis,
                     comp: Default::default(),
                 })
             }
         }
+        this.list.sort();
+        this.list.reverse();
         this
     }
     fn finalize(mut self) -> VecAddChain {
-        assert_eq!(self.heap.len(), 1);
-        let entry = self.heap.pop().unwrap();
-        assert_eq!(self.heap.len(), 0);
+        assert_eq!(self.list.len(), 1);
+        let entry = self.list.pop().unwrap();
+        assert_eq!(self.list.len(), 0);
         //println!("depth: {}", entry.g.depth);
         let mut labels = HConMap::<Chain, usize>::new();
         let mut children_added = HConSet::<Chain>::new();
@@ -191,27 +135,20 @@ impl<F, C> Drop for State<F, C> {
 
 pub fn build_chain<F: PrimeField, C: ChainCmp>(target: Vec<F>) -> VecAddChain {
     let mut state = State::<F::BigInt, C>::new(target.into_iter().map(|f| f.into_repr()).collect());
-    while state.heap.len() > 1 {
-        let mut first = state.heap.pop().unwrap();
-        let mut second = state.heap.pop().unwrap();
-        let half_first = {
-            let mut t = first.x;
-            t.div2();
-            t
-        };
-        if half_first > second.x {
-            state.heap.push(second);
-            first.x.div2();
-            first.g = state.add(first.g.clone(), first.g);
-            state.heap.push(first);
-        } else {
+    while state.list.len() > 1 {
+        for i in 0..(state.list.len() / 2) {
+            let mut first = state.list[2 * i + 0].clone();
+            let mut second = state.list[2 * i + 1].clone();
             assert!(!first.x.sub_noborrow(&second.x));
             //first.x -= second.x;
             second.g = state.add(first.g.clone(), second.g);
-            state.heap.push(second);
-            if !first.x.is_zero() {
-                state.heap.push(first);
-            }
+            state.list[2 * i + 0] = first;
+            state.list[2 * i + 1] = second;
+        }
+        state.list.sort();
+        state.list.reverse();
+        while state.list.last().map(|l| l.x.is_zero()).unwrap_or(false) {
+            state.list.pop();
         }
     }
     state.finalize()
