@@ -13,11 +13,8 @@ fn test<F: PrimeField, R: Rng>(
     let target = (0..elems).map(|_| F::rand(rng)).collect::<Vec<F>>();
     let chain = builder(target.clone());
     let adds = chain.adds.len();
-    //println!("Adds : {}", adds);
-    //println!("Elems: {}", elems);
     let ops_per_elem = adds as f64 / elems as f64;
     let add_cost = 6f64;
-    let field_size = 256f64;
     let constraints_per_elem = ops_per_elem * add_cost;
     println!(
         "{:10}, log2(elems): {:2}, Adds per elem: {:>8.1}, Cs per elem: {:>8.2}, Cs: {:>8}",
