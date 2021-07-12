@@ -12,6 +12,7 @@ hashconsing = { git = "https://github.com/alex-ozdemir/hashconsing.git", branch 
 
 [dev-dependencies]
 ark-bls12-381 = "0.3"
+ark-ed-on-bls12-381 = "0.3"
 ark-std = "0.3"
 rand = "0.8"
 

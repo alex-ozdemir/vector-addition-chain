@@ -1,6 +1,7 @@
 use ark_ff::Field;
 
 pub mod bos_coster;
+pub mod bos_coster_fast;
 pub mod bos_coster_many;
 
 /// A vector addition chain
@@ -47,70 +48,71 @@ pub type ChainBuilder<F> = fn(target: Vec<F>) -> VecAddChain;
 
 #[cfg(test)]
 mod tests {
-    use super::bos_coster;
-    use super::bos_coster_many;
-    use super::{check_chain, ChainBuilder, VecAddChain};
+    use super::{
+        bos_coster, bos_coster_fast, bos_coster_many, check_chain, ChainBuilder, VecAddChain,
+    };
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
 
-    fn test_on_target<F: PrimeField>(builder: ChainBuilder<F>, target: Vec<F>) -> VecAddChain {
-        let chain = builder(target.clone());
-        check_chain(&chain, &target);
-        chain
+    fn test_on_target<F: PrimeField>(target: Vec<F>) {
+        let builders: Vec<(&str, Box<dyn Fn(Vec<F>) -> VecAddChain>)> = vec![
+            (
+                "shallow",
+                Box::new(bos_coster::build_chain::<F, bos_coster::UseShallow>),
+            ),
+            (
+                "deep",
+                Box::new(bos_coster::build_chain::<F, bos_coster::UseDeep>),
+            ),
+            (
+                "m-shallow",
+                Box::new(bos_coster_many::build_chain::<F, bos_coster::UseShallow>),
+            ),
+            (
+                "m-deep",
+                Box::new(bos_coster_many::build_chain::<F, bos_coster::UseDeep>),
+            ),
+            ("fast", Box::new(bos_coster_fast::build_chain::<F>)),
+        ];
+        for (name, builder) in builders {
+            println!("Running: {}", name);
+            let chain = builder(target.clone());
+            check_chain(&chain, &target);
+        }
+    }
+
+    fn double_odd<F: PrimeField>() {
+        test_on_target(vec![F::from(11u32), F::from(2u32)])
     }
 
     fn test_ones<F: PrimeField>() {
         for n in 1..100 {
-            let ch = test_on_target::<F>(
-                bos_coster::build_chain::<F, bos_coster::UseShallow>,
-                vec![F::one(); n],
-            );
-            assert_eq!(ch.adds.len(), n - 1);
-            let ch = test_on_target::<F>(
-                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
-                vec![F::one(); n],
-            );
-            assert_eq!(ch.adds.len(), n - 1);
+            test_on_target::<F>(vec![F::one(); n]);
+        }
+    }
+
+    fn test_single<F: PrimeField>() {
+        for n in 2..100u32 {
+            test_on_target::<F>(vec![F::from(n)]);
         }
     }
 
     fn test_twos<F: PrimeField>() {
         for n in 1..100 {
-            let _ch = test_on_target::<F>(
-                bos_coster::build_chain::<F, bos_coster::UseShallow>,
-                vec![F::from(2 as u32); n],
-            );
-            let _ch = test_on_target::<F>(
-                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
-                vec![F::from(2 as u32); n],
-            );
+            test_on_target::<F>(vec![F::from(2 as u32); n]);
         }
     }
 
     fn test_incr<F: PrimeField>() {
         for n in 2..100 {
-            let _ch = test_on_target::<F>(
-                bos_coster::build_chain::<F, bos_coster::UseShallow>,
-                (0..n).map(|i| F::from(i as u32)).collect(),
-            );
-            let _ch = test_on_target::<F>(
-                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
-                (0..n).map(|i| F::from(i as u32)).collect(),
-            );
+            test_on_target::<F>((0..n).map(|i| F::from(i as u32)).collect());
         }
     }
 
     fn test_rand<F: PrimeField>(size: usize, trials: usize) {
         let rng = &mut ark_std::test_rng();
         for _ in 0..trials {
-            let _ch = test_on_target::<F>(
-                bos_coster::build_chain::<F, bos_coster::UseShallow>,
-                (0..size).map(|_| F::rand(rng)).collect(),
-            );
-            let _ch = test_on_target::<F>(
-                bos_coster_many::build_chain::<F, bos_coster::UseShallow>,
-                (0..size).map(|_| F::rand(rng)).collect(),
-            );
+            test_on_target::<F>((0..size).map(|_| F::rand(rng)).collect());
         }
     }
 
@@ -131,6 +133,28 @@ mod tests {
 
     #[test]
     fn test_rand_bls12_381() {
+        test_rand::<Fr>(10, 10);
         test_rand::<Fr>(1000, 1);
+    }
+
+    #[test]
+    fn test_double_odd_bls12_381() {
+        double_odd::<Fr>();
+    }
+
+    #[test]
+    fn test_single_bls12_381() {
+        test_single::<Fr>();
+    }
+
+    #[test]
+    fn test_incr_ed_on_bls12_381() {
+        test_incr::<ark_ed_on_bls12_381::Fr>();
+    }
+
+    #[test]
+    fn test_rand_ed_on_bls12_381() {
+        test_rand::<ark_ed_on_bls12_381::Fr>(10, 10);
+        test_rand::<ark_ed_on_bls12_381::Fr>(1000, 1);
     }
 }

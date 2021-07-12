@@ -1,7 +1,7 @@
 use ark_bls12_381::Fr;
 use ark_ff::PrimeField;
 use rand::Rng;
-use vector_addition_chain::{bos_coster, ChainBuilder, bos_coster_many};
+use vector_addition_chain::{bos_coster, ChainBuilder, bos_coster_many, bos_coster_fast};
 fn test<F: PrimeField, R: Rng>(
     l2elems: usize,
     builder: ChainBuilder<F>,
@@ -12,6 +12,7 @@ fn test<F: PrimeField, R: Rng>(
     let elems = 1 << l2elems;
     let target = (0..elems).map(|_| F::rand(rng)).collect::<Vec<F>>();
     let chain = builder(target.clone());
+    //check_chain(&chain, &target);
     let adds = chain.adds.len();
     let ops_per_elem = adds as f64 / elems as f64;
     let add_cost = 6f64;
@@ -53,6 +54,12 @@ fn main() {
                     l2elems,
                     bos_coster_many::build_chain::<Fr, bos_coster::UseDeep>,
                     "m-deep",
+                    rng,
+                );
+                test(
+                    l2elems,
+                    bos_coster_fast::build_chain::<Fr>,
+                    "fast",
                     rng,
                 );
             }

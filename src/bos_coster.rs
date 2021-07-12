@@ -201,6 +201,13 @@ pub fn build_chain<F: PrimeField, C: ChainCmp>(target: Vec<F>) -> VecAddChain {
         };
         if half_first > second.x {
             state.heap.push(second);
+            if first.x.is_odd() {
+                state.heap.push(Entry {
+                    x: F::one().into_repr(),
+                    g: first.g.clone(),
+                    comp: Default::default(),
+                });
+            }
             first.x.div2();
             first.g = state.add(first.g.clone(), first.g);
             state.heap.push(first);
