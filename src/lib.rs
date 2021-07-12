@@ -49,7 +49,7 @@ pub type ChainBuilder<F> = fn(target: Vec<F>) -> VecAddChain;
 #[cfg(test)]
 mod tests {
     use super::{
-        bos_coster, bos_coster_fast, bos_coster_many, check_chain, ChainBuilder, VecAddChain,
+        bos_coster, bos_coster_fast, bos_coster_many, check_chain, VecAddChain,
     };
     use ark_bls12_381::Fr;
     use ark_ff::PrimeField;
