@@ -91,5 +91,5 @@ def build_chain(scalars):
 
 print('bits,n,p')
 for bits in range(5,31):
-    for n in [5, 10, 50, 100, 500, 1000]:
+    for n in [10, 30, 100, 300, 1000]:
         test(bits, n, 500, 1, 1)
