@@ -92,8 +92,8 @@ def build_chain(scalars):
     assert heapq.heappop(x)[0] == -1
     return chain
 
-pool = Pool(8)
-outputs = pool.starmap(test, [(bits, n, 500, 1, 1) for bits in range(5,31) for n in [10, 30, 100, 300, 1000]])
+pool = Pool(16)
+outputs = pool.starmap(test, [(bits, n, 5000, 1, 1) for bits in range(5,31) for n in [10, 30, 100, 300, 1000]])
 print('bits,n,p')
 for bits, n, bad_prob in outputs:
     print(f"{bits},{n},{bad_prob}")
